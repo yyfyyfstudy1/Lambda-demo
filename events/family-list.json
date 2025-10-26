@@ -1,0 +1,18 @@
+{
+  "httpMethod": "GET",
+  "path": "/family",
+  "headers": {},
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": null,
+  "requestContext": {
+    "requestId": "test-request-id",
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id-12345",
+        "email": "test@example.com"
+      }
+    }
+  }
+}
+

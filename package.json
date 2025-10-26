@@ -1,28 +1,41 @@
 {
   "name": "lambda-spacetalk",
   "version": "1.0.0",
-  "description": "Enterprise Lambda backend with Cognito auth and DynamoDB",
+  "description": "Enterprise Lambda backend with Cognito auth, DynamoDB, and LocalStack support",
   "main": "index.js",
   "scripts": {
-    "build": "npm run clean && npm run compile",
-    "clean": "rimraf dist",
+    "build": "npm run clean && npm run compile && npm run package",
+    "clean": "rimraf dist .aws-sam",
     "compile": "tsc",
+    "package": "bash scripts/package-lambda.sh",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
+    "local:start": "bash scripts/start-local.sh",
+    "local:stop": "docker-compose down",
+    "local:logs": "docker-compose logs -f localstack",
+    "local:restart": "npm run local:stop && npm run local:start",
+    "local:terraform": "bash scripts/terraform-local.sh",
+    "local:clean": "docker-compose down -v && rm -rf localstack",
+    "local:dashboard": "open https://app.localstack.cloud || echo 'Visit: https://app.localstack.cloud'",
+    "local:status": "bash scripts/view-resources.sh",
     "terraform:init": "cd terraform && terraform init",
-    "terraform:plan": "cd terraform && terraform plan",
-    "terraform:apply": "cd terraform && terraform apply",
-    "terraform:destroy": "cd terraform && terraform destroy"
+    "terraform:plan": "cd terraform && terraform plan -var-file=environments/dev.tfvars",
+    "terraform:apply": "cd terraform && terraform apply -var-file=environments/dev.tfvars",
+    "terraform:destroy": "cd terraform && terraform destroy",
+    "deploy": "npm run build && cd terraform && terraform apply -var-file=environments/dev.tfvars -auto-approve",
+    "deploy:prod": "npm run build && cd terraform && terraform apply -var-file=environments/prod.tfvars"
   },
   "keywords": [
     "aws",
     "lambda",
     "cognito",
     "dynamodb",
-    "terraform"
+    "terraform",
+    "localstack",
+    "serverless"
   ],
   "author": "Your Company",
   "license": "MIT",
@@ -41,9 +54,10 @@
   },
   "dependencies": {
     "aws-sdk": "^2.1531.0",
+    "dotenv": "^17.2.3",
+    "joi": "^17.12.0",
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1",
-    "joi": "^17.12.0",
     "winston": "^3.11.0"
   }
 }

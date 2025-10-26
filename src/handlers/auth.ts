@@ -23,16 +23,23 @@ export const handler = async (
       return successResponse({}, 200);
     }
 
-    // 路由处理
-    if (path === '/auth/login' && httpMethod === 'POST') {
+    // 路由处理 - 规范化路径（移除stage前缀，如果存在）
+    // path可能是 /auth/login 或 /dev/auth/login
+    let cleanPath = path;
+    if (!cleanPath.startsWith('/auth')) {
+      // 如果不是以/auth开始，说明有stage前缀，移除第一段
+      cleanPath = cleanPath.replace(/^\/[^\/]+/, '');
+    }
+    
+    if (cleanPath === '/auth/login' && httpMethod === 'POST') {
       return await handleLogin(event);
     }
 
-    if (path === '/auth/register' && httpMethod === 'POST') {
+    if (cleanPath === '/auth/register' && httpMethod === 'POST') {
       return await handleRegister(event);
     }
 
-    if (path === '/auth/me' && httpMethod === 'GET') {
+    if (cleanPath === '/auth/me' && httpMethod === 'GET') {
       return await handleGetMe(event);
     }
 

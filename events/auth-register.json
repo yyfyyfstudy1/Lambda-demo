@@ -1,0 +1,15 @@
+{
+  "httpMethod": "POST",
+  "path": "/auth/register",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": "{\"email\":\"demo@example.com\",\"password\":\"Demo1234!\",\"username\":\"demouser\"}",
+  "requestContext": {
+    "requestId": "test-request-id",
+    "authorizer": {}
+  }
+}
+

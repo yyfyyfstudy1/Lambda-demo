@@ -43,7 +43,8 @@ export class UserService {
       const users = await dynamoDBService.query(
         DYNAMODB_TABLES.USERS,
         'email = :email',
-        { ':email': email }
+        { ':email': email },
+        'email-index'  // 使用 GSI 索引
       );
       return users[0] || null;
     } catch (error) {

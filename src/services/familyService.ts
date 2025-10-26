@@ -52,7 +52,8 @@ export class FamilyService {
       const families = await dynamoDBService.query(
         DYNAMODB_TABLES.FAMILIES,
         'userId = :userId',
-        { ':userId': userId }
+        { ':userId': userId },
+        'userId-index'  // 使用 GSI 索引
       );
       return families;
     } catch (error) {

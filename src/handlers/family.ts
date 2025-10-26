@@ -24,37 +24,53 @@ export const handler = async (
     }
 
     // 获取用户ID
-    const userId = event.requestContext.authorizer?.['claims']?.['sub'];
+    // 本地开发时使用测试用户ID，生产环境从 Cognito 获取
+    let userId = event.requestContext.authorizer?.['claims']?.['sub'];
+    
+    // 如果是本地环境且没有用户ID，使用测试ID
     if (!userId) {
-      return unauthorizedResponse('Authentication required');
+      const stage = process.env['STAGE'] || 'dev';
+      if (stage === 'local') {
+        userId = 'test-user-id-12345'; // 本地测试用户
+        logger.info('Using test user ID for local development', { userId });
+      } else {
+        return unauthorizedResponse('Authentication required');
+      }
     }
 
-    // 路由处理
-    if (path === '/family' && httpMethod === 'POST') {
+    // 路由处理 - 规范化路径（移除stage前缀，如果存在）
+    // path可能是 /family 或 /dev/family
+    let cleanPath = path;
+    if (!cleanPath.startsWith('/family')) {
+      // 如果不是以/family开始，说明有stage前缀，移除第一段
+      cleanPath = cleanPath.replace(/^\/[^\/]+/, '');
+    }
+    
+    if (cleanPath === '/family' && httpMethod === 'POST') {
       return await handleCreateFamily(event, userId);
     }
 
-    if (path === '/family' && httpMethod === 'GET') {
+    if (cleanPath === '/family' && httpMethod === 'GET') {
       return await handleGetFamilies(event, userId);
     }
 
-    if (path.startsWith('/family/') && httpMethod === 'GET') {
+    if (cleanPath.startsWith('/family/') && httpMethod === 'GET') {
       return await handleGetFamily(event, userId);
     }
 
-    if (path.startsWith('/family/') && httpMethod === 'PUT') {
+    if (cleanPath.startsWith('/family/') && httpMethod === 'PUT') {
       return await handleUpdateFamily(event, userId);
     }
 
-    if (path.startsWith('/family/') && httpMethod === 'DELETE') {
+    if (cleanPath.startsWith('/family/') && httpMethod === 'DELETE') {
       return await handleDeleteFamily(event, userId);
     }
 
-    if (path.startsWith('/family/') && path.endsWith('/members') && httpMethod === 'POST') {
+    if (cleanPath.startsWith('/family/') && cleanPath.endsWith('/members') && httpMethod === 'POST') {
       return await handleAddMember(event, userId);
     }
 
-    if (path.startsWith('/family/') && path.includes('/members/') && httpMethod === 'DELETE') {
+    if (cleanPath.startsWith('/family/') && cleanPath.includes('/members/') && httpMethod === 'DELETE') {
       return await handleRemoveMember(event, userId);
     }
 

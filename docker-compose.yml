@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: lambda-spacetalk-localstack
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"            # LocalStack 统一端点
+      - "4510-4559:4510-4559"  # 外部服务端口范围
+    environment:
+      - SERVICES=cognito-idp,dynamodb,apigateway,lambda,iam,s3,logs
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PERSISTENCE=1
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init-aws.sh"
+    networks:
+      - lambda-network
+
+networks:
+  lambda-network:
+    driver: bridge

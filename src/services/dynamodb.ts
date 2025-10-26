@@ -6,9 +6,21 @@ export class DynamoDBService {
   private dynamodb: DynamoDB.DocumentClient;
 
   constructor() {
-    this.dynamodb = new DynamoDB.DocumentClient({
+    const dynamoConfig: any = {
       region: CONFIG.AWS_REGION
-    });
+    };
+
+    // 如果使用 LocalStack，设置自定义端点
+    if (CONFIG.USE_LOCALSTACK) {
+      dynamoConfig.endpoint = CONFIG.LOCALSTACK_ENDPOINT;
+      dynamoConfig.credentials = {
+        accessKeyId: 'test',
+        secretAccessKey: 'test'
+      };
+      logger.info('Using LocalStack for DynamoDB', { endpoint: CONFIG.LOCALSTACK_ENDPOINT });
+    }
+
+    this.dynamodb = new DynamoDB.DocumentClient(dynamoConfig);
   }
 
   async getItem(tableName: string, key: Record<string, any>): Promise<any> {

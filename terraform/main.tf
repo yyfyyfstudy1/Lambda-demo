@@ -10,6 +10,28 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+
+  # LocalStack 配置
+  skip_credentials_validation = var.use_localstack
+  skip_metadata_api_check     = var.use_localstack
+  skip_requesting_account_id  = var.use_localstack
+
+  # 如果使用 LocalStack，覆盖所有 AWS 服务端点
+  endpoints {
+    apigateway     = var.use_localstack ? var.localstack_endpoint : null
+    cloudwatch     = var.use_localstack ? var.localstack_endpoint : null
+    dynamodb       = var.use_localstack ? var.localstack_endpoint : null
+    ec2            = var.use_localstack ? var.localstack_endpoint : null
+    iam            = var.use_localstack ? var.localstack_endpoint : null
+    lambda         = var.use_localstack ? var.localstack_endpoint : null
+    s3             = var.use_localstack ? var.localstack_endpoint : null
+    cognitoidp     = var.use_localstack ? var.localstack_endpoint : null
+    sts            = var.use_localstack ? var.localstack_endpoint : null
+  }
+
+  # LocalStack 使用假凭证
+  access_key = var.use_localstack ? "test" : null
+  secret_key = var.use_localstack ? "test" : null
 }
 
 # 数据源
@@ -45,6 +67,18 @@ variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
   default     = 14
+}
+
+variable "use_localstack" {
+  description = "Whether to use LocalStack for local development"
+  type        = bool
+  default     = false
+}
+
+variable "localstack_endpoint" {
+  description = "LocalStack endpoint URL"
+  type        = string
+  default     = "http://localhost:4566"
 }
 
 # 本地变量
@@ -208,34 +242,12 @@ resource "aws_api_gateway_resource" "family_proxy" {
 }
 
 # API Gateway Methods
-resource "aws_api_gateway_method" "auth_login" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.auth.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "auth_register" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.auth.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "auth_me" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.auth.id
-  http_method   = "GET"
-  authorization = "COGNITO_USER_POOLS"
-  authorizer_id = aws_api_gateway_authorizer.cognito.id
-}
-
+# Auth proxy handles all /auth/* routes, authorization is handled in Lambda
 resource "aws_api_gateway_method" "auth_proxy" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.auth_proxy.id
   http_method   = "ANY"
-  authorization = "COGNITO_USER_POOLS"
-  authorizer_id = aws_api_gateway_authorizer.cognito.id
+  authorization = "NONE"
 }
 
 resource "aws_api_gateway_method" "family" {
@@ -254,34 +266,29 @@ resource "aws_api_gateway_method" "family_proxy" {
   authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
+# CORS OPTIONS methods
+resource "aws_api_gateway_method" "auth_proxy_options" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.auth_proxy.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "family_options" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.family.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "family_proxy_options" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.family_proxy.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
 # API Gateway Integrations
-resource "aws_api_gateway_integration" "auth_login" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = aws_api_gateway_resource.auth.id
-  http_method = aws_api_gateway_method.auth_login.http_method
-  integration_http_method = "POST"
-  type = "AWS_PROXY"
-  uri = aws_lambda_function.auth.invoke_arn
-}
-
-resource "aws_api_gateway_integration" "auth_register" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = aws_api_gateway_resource.auth.id
-  http_method = aws_api_gateway_method.auth_register.http_method
-  integration_http_method = "POST"
-  type = "AWS_PROXY"
-  uri = aws_lambda_function.auth.invoke_arn
-}
-
-resource "aws_api_gateway_integration" "auth_me" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = aws_api_gateway_resource.auth.id
-  http_method = aws_api_gateway_method.auth_me.http_method
-  integration_http_method = "POST"
-  type = "AWS_PROXY"
-  uri = aws_lambda_function.auth.invoke_arn
-}
-
 resource "aws_api_gateway_integration" "auth_proxy" {
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.auth_proxy.id
@@ -309,33 +316,40 @@ resource "aws_api_gateway_integration" "family_proxy" {
   uri = aws_lambda_function.family.invoke_arn
 }
 
+# CORS integrations
+resource "aws_api_gateway_integration" "auth_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.auth_proxy.id
+  http_method = aws_api_gateway_method.auth_proxy_options.http_method
+  type = "MOCK"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_integration" "family_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family.id
+  http_method = aws_api_gateway_method.family_options.http_method
+  type = "MOCK"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_integration" "family_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family_proxy.id
+  http_method = aws_api_gateway_method.family_proxy_options.http_method
+  type = "MOCK"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
 # Lambda Permissions
-resource "aws_lambda_permission" "auth_login" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "auth_register" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth.function_name
-  principal   = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "auth_me" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-}
-
 resource "aws_lambda_permission" "auth_proxy" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGatewayAuth"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.auth.function_name
   principal     = "apigateway.amazonaws.com"
@@ -343,7 +357,7 @@ resource "aws_lambda_permission" "auth_proxy" {
 }
 
 resource "aws_lambda_permission" "family" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGatewayFamily"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.family.function_name
   principal     = "apigateway.amazonaws.com"
@@ -351,26 +365,112 @@ resource "aws_lambda_permission" "family" {
 }
 
 resource "aws_lambda_permission" "family_proxy" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGatewayFamilyProxy"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.family.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
 
+# CORS response methods
+resource "aws_api_gateway_method_response" "auth_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.auth_proxy.id
+  http_method = aws_api_gateway_method.auth_proxy_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "family_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family.id
+  http_method = aws_api_gateway_method.family_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "family_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family_proxy.id
+  http_method = aws_api_gateway_method.family_proxy_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+# CORS integration responses
+resource "aws_api_gateway_integration_response" "auth_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.auth_proxy.id
+  http_method = aws_api_gateway_method.auth_proxy_options.http_method
+  status_code = aws_api_gateway_method_response.auth_proxy_options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "family_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family.id
+  http_method = aws_api_gateway_method.family_options.http_method
+  status_code = aws_api_gateway_method_response.family_options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "family_proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.family_proxy.id
+  http_method = aws_api_gateway_method.family_proxy_options.http_method
+  status_code = aws_api_gateway_method_response.family_proxy_options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "main" {
   depends_on = [
-    aws_api_gateway_integration.auth_login,
-    aws_api_gateway_integration.auth_register,
-    aws_api_gateway_integration.auth_me,
     aws_api_gateway_integration.auth_proxy,
     aws_api_gateway_integration.family,
-    aws_api_gateway_integration.family_proxy
+    aws_api_gateway_integration.family_proxy,
+    aws_api_gateway_integration.auth_proxy_options,
+    aws_api_gateway_integration.family_options,
+    aws_api_gateway_integration.family_proxy_options
   ]
 
   rest_api_id = aws_api_gateway_rest_api.main.id
   stage_name  = var.environment
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+  
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_integration.auth_proxy.id,
+      aws_api_gateway_integration.family.id,
+      aws_api_gateway_integration.family_proxy.id,
+    ]))
+  }
 }
 
 # Lambda Execution Role
@@ -448,7 +548,7 @@ resource "aws_lambda_function" "auth" {
   filename         = "../dist/handlers/auth.zip"
   function_name    = "${var.project_name}-${var.environment}-auth"
   role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "dist/handlers/auth.handler"
+  handler         = "handlers/auth.handler"
   source_code_hash = filebase64sha256("../dist/handlers/auth.zip")
   runtime         = "nodejs18.x"
   timeout         = 30
@@ -472,7 +572,7 @@ resource "aws_lambda_function" "family" {
   filename         = "../dist/handlers/family.zip"
   function_name    = "${var.project_name}-${var.environment}-family"
   role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "dist/handlers/family.handler"
+  handler         = "handlers/family.handler"
   source_code_hash = filebase64sha256("../dist/handlers/family.zip")
   runtime         = "nodejs18.x"
   timeout         = 30

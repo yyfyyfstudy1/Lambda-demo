@@ -1,0 +1,20 @@
+{
+  "httpMethod": "POST",
+  "path": "/family",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": "{\"name\":\"testFamily\",\"description\":\"这是你妈的家庭\",\"members\":[{\"name\":\"张三\",\"relationship\":\"父亲\",\"age\":45,\"email\":\"zhangsan@example.com\"},{\"name\":\"李四\",\"relationship\":\"母亲\",\"age\":42,\"email\":\"lisi@example.com\"}]}",
+  "requestContext": {
+    "requestId": "test-request-id",
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id-12345",
+        "email": "test@example.com"
+      }
+    }
+  }
+}
+

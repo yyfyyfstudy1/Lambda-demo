@@ -6,9 +6,21 @@ export class CognitoService {
   private cognito: CognitoIdentityServiceProvider;
 
   constructor() {
-    this.cognito = new CognitoIdentityServiceProvider({
+    const cognitoConfig: any = {
       region: CONFIG.AWS_REGION
-    });
+    };
+
+    // 如果使用 LocalStack，设置自定义端点
+    if (CONFIG.USE_LOCALSTACK) {
+      cognitoConfig.endpoint = CONFIG.LOCALSTACK_ENDPOINT;
+      cognitoConfig.credentials = {
+        accessKeyId: 'test',
+        secretAccessKey: 'test'
+      };
+      logger.info('Using LocalStack for Cognito', { endpoint: CONFIG.LOCALSTACK_ENDPOINT });
+    }
+
+    this.cognito = new CognitoIdentityServiceProvider(cognitoConfig);
   }
 
   async authenticateUser(email: string, password: string): Promise<any> {

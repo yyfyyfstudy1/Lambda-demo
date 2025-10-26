@@ -1,193 +1,201 @@
 # Lambda SpaceTalk
 
-企业级Node.js Lambda后端项目，使用Cognito身份验证、DynamoDB数据库和Terraform基础设施管理。
+企业级 Node.js Lambda 后端项目，使用 Cognito 身份验证、DynamoDB 数据库和 Terraform 基础设施管理。
 
-## 项目结构
+**✨ 支持完全本地化开发（LocalStack）+ 多环境部署（AWS）**
+
+## 🚀 快速开始
+
+### 本地开发（使用 LocalStack）
+
+```bash
+# 一键启动本地环境
+npm run local:start
+
+# 在 WebStorm/VS Code 中调试（F5）
+# 或使用命令行
+sam local invoke AuthFunction --event events/auth-login-local.json
+```
+
+**优势**:
+- ✅ 完全离线开发
+- ✅ 零 AWS 成本
+- ✅ 不污染线上数据
+- ✅ 快速迭代
+
+### 部署到 AWS
+
+```bash
+# 部署到开发环境
+npm run deploy
+
+# 部署到生产环境
+npm run deploy:prod
+```
+
+## 📁 项目结构
 
 ```
 lambda-spacetalk/
-├── src/                          # 源代码
-│   ├── handlers/                 # Lambda处理器
-│   │   ├── auth.ts              # 身份验证处理器
-│   │   └── family.ts            # 家庭管理处理器
-│   ├── services/                 # 业务逻辑服务
-│   │   ├── dynamodb.ts          # DynamoDB服务
-│   │   ├── cognito.ts           # Cognito服务
-│   │   ├── userService.ts        # 用户服务
-│   │   └── familyService.ts     # 家庭服务
-│   ├── utils/                    # 工具函数
-│   │   ├── logger.ts            # 日志工具
-│   │   ├── response.ts          # 响应工具
-│   │   └── validation.ts        # 验证工具
-│   ├── types/                    # 类型定义
-│   │   └── index.ts             # 主要类型
-│   └── config/                   # 配置
-│       └── index.ts             # 配置管理
-├── terraform/                    # 基础设施代码
-│   ├── main.tf                  # 主要资源
-│   ├── outputs.tf              # 输出定义
-│   └── terraform.tfvars        # 环境配置
-├── tests/                       # 测试文件
-│   ├── unit/                   # 单元测试
-│   ├── integration/            # 集成测试
-│   └── setup.ts               # 测试设置
-├── scripts/                    # 脚本
-│   └── deploy.sh              # 部署脚本
-├── serverless.yml              # Serverless配置
-├── package.json               # 项目依赖
-├── tsconfig.json              # TypeScript配置
-├── jest.config.js             # Jest测试配置
-├── .eslintrc.js               # ESLint配置
-├── .prettierrc                # Prettier配置
-└── README.md                  # 项目说明
+├── src/                      # TypeScript 源代码
+│   ├── handlers/            # Lambda 处理器
+│   ├── services/            # 业务服务（支持LocalStack）
+│   └── config/              # 多环境配置
+├── terraform/                # 基础设施即代码
+│   └── environments/        # 环境配置文件
+│       ├── local.tfvars     # LocalStack
+│       ├── dev.tfvars       # AWS Dev
+│       └── prod.tfvars      # AWS Prod
+├── events/                   # 测试事件
+├── docker-compose.yml        # LocalStack 配置
+├── template-local.yaml       # SAM 本地模板
+└── scripts/                  # 自动化脚本
 ```
 
-## 功能特性
+## 🔧 核心命令
 
-### 身份验证 (Auth)
-- 用户登录/注册
-- JWT令牌管理
-- Cognito集成
-- 用户信息管理
+### 本地开发（LocalStack）
 
-### 家庭管理 (Family)
-- 创建家庭
-- 查看家庭列表
-- 更新家庭信息
-- 删除家庭
-- 家庭成员管理
+```bash
+npm run local:start        # 启动 LocalStack 环境
+npm run local:stop         # 停止 LocalStack
+npm run local:logs         # 查看日志
+npm run local:terraform    # Terraform 配置 LocalStack
+```
 
-## 技术栈
+### 构建和测试
+
+```bash
+npm run build              # 编译 TypeScript + 打包
+npm test                   # 运行单元测试
+sam local start-api        # 启动本地 API (http://localhost:3000)
+```
+
+### 部署到 AWS
+
+```bash
+npm run deploy             # 部署到 dev 环境
+npm run deploy:prod        # 部署到 prod 环境
+npm run terraform:plan     # 查看变更计划
+```
+
+## 🌍 多环境配置
+
+| 环境 | 用途 | 配置文件 | AWS 服务 |
+|------|------|---------|---------|
+| **local** | 本地开发 | `local.tfvars` | LocalStack (免费) |
+| **dev** | 开发测试 | `dev.tfvars` | AWS ap-southeast-1 |
+| **prod** | 生产环境 | `prod.tfvars` | AWS ap-southeast-1 |
+
+## 📖 API 端点
+
+### 认证端点（无需授权）
+- `POST /auth/login` - 用户登录
+- `POST /auth/register` - 用户注册
+
+### 家庭管理（需要 Cognito 授权）
+- `GET /family` - 获取家庭列表
+- `POST /family` - 创建家庭
+- `GET /family/{id}` - 获取详情
+- `PUT /family/{id}` - 更新家庭
+- `DELETE /family/{id}` - 删除家庭
+- `POST /family/{id}/members` - 添加成员
+- `DELETE /family/{id}/members/{memberId}` - 删除成员
+
+## 🛠️ 技术栈
 
 - **运行时**: Node.js 18.x
 - **语言**: TypeScript
-- **框架**: AWS Lambda
+- **框架**: AWS Lambda + SAM
 - **数据库**: DynamoDB
 - **身份验证**: AWS Cognito
 - **基础设施**: Terraform
-- **部署**: Serverless Framework
-- **日志**: Winston
-- **验证**: Joi
+- **本地开发**: LocalStack + Docker
 
-## 快速开始
+## 🔍 本地调试
 
-### 1. 安装依赖
+### 环境要求
+- Docker Desktop（运行中）
+- Node.js 18+
+- AWS SAM CLI
+- Terraform
 
-```bash
-npm install
+### IDE 配置
+- **WebStorm**: 4 个预配置的调试配置
+- **VS Code**: `.vscode/launch.json` 配置
+
+### 开发工作流
+```
+1. npm run local:start      # 启动 LocalStack
+2. 修改代码                  # 开发
+3. npm run build            # 编译
+4. F5 调试或 sam local invoke
+5. npm run local:stop       # 停止环境
 ```
 
-### 2. 配置环境变量
+## ⚠️ LocalStack 限制
 
-```bash
-cp env.example .env
-# 编辑 .env 文件，设置必要的环境变量
-```
+### 免费版
+- ✅ **DynamoDB** - 完全支持
+- ✅ **Lambda** - 完全支持
+- ✅ **API Gateway** - 完全支持
+- ⚠️ **Cognito** - 需要 Pro 版本
 
-### 3. 部署基础设施
+### 解决方案
+1. **LocalStack Pro** - 完整功能（推荐商业项目）
+2. **混合模式** - DynamoDB 用 LocalStack，Cognito 用 AWS dev
+3. **Mock 认证** - 开发时跳过真实认证
 
-```bash
-# 初始化Terraform
-npm run terraform:init
+详见 `docs/LOCALSTACK_SETUP.md`
 
-# 规划部署
-npm run terraform:plan
+## 📚 详细文档
 
-# 应用基础设施
-npm run terraform:apply
-```
+- [LocalStack 配置完成](docs/LOCALSTACK_SETUP.md) - LocalStack 使用指南
+- [本地测试](docs/LOCAL_TESTING.md) - 详细测试文档
+- [WebStorm 配置](docs/WEBSTORM_GUIDE.md) - IDE 配置
+- [部署总结](docs/DEPLOYMENT_SUMMARY.md) - 部署信息
 
-### 4. 部署Lambda函数
+## 🎯 最佳实践
 
-```bash
-npm run deploy
-```
+### 环境隔离
+- **local**: 快速开发，完全离线
+- **dev**: 集成测试，团队共享
+- **staging**: 预发布验证（可选）
+- **prod**: 生产环境，严格控制
 
-### 5. 本地开发
+### 成本优化
+- 开发：LocalStack（免费）
+- 测试：dev 环境（低成本）
+- 生产：按需计费，设置预算告警
 
-```bash
-# 启动本地开发服务器
-npm run local
-```
+### 安全性
+- 开发者：只能访问 local 和 dev
+- CI/CD：才能访问 staging 和 prod
+- 生产数据：严格权限控制
 
-## API 端点
+## 📊 资源信息
 
-### 身份验证端点
+### LocalStack（本地）
+- **端点**: http://localhost:4566
+- **User Pool**: us-east-1_localstack
+- **测试用户**: test@example.com / Test1234!
 
-- `POST /auth/login` - 用户登录
-- `POST /auth/register` - 用户注册
-- `GET /auth/me` - 获取当前用户信息
+### AWS Dev 环境
+- **Region**: ap-southeast-1
+- **User Pool**: ap-southeast-1_BXjpIpfBI
+- **API**: https://tr3khtk0v4.execute-api.ap-southeast-1.amazonaws.com/dev
 
-### 家庭管理端点
+## 🤝 贡献
 
-- `POST /family` - 创建家庭
-- `GET /family` - 获取用户家庭列表
-- `GET /family/{id}` - 获取特定家庭信息
-- `PUT /family/{id}` - 更新家庭信息
-- `DELETE /family/{id}` - 删除家庭
-- `POST /family/{id}/members` - 添加家庭成员
-- `DELETE /family/{id}/members/{memberId}` - 删除家庭成员
-
-## 开发指南
-
-### 代码规范
-
-- 使用TypeScript严格模式
-- 遵循ESLint规则
-- 使用Prettier格式化代码
-- 编写单元测试和集成测试
-
-### 测试
-
-```bash
-# 运行所有测试
-npm test
-
-# 运行测试并生成覆盖率报告
-npm run test:coverage
-
-# 监听模式运行测试
-npm run test:watch
-```
-
-### 代码检查
-
-```bash
-# 运行ESLint检查
-npm run lint
-
-# 自动修复ESLint问题
-npm run lint:fix
-```
-
-## 部署
-
-```bash
-npm run deploy
-```
-
-## 监控和日志
-
-- CloudWatch Logs用于日志收集
-- 使用Winston进行结构化日志记录
-- 支持不同日志级别
-
-## 安全考虑
-
-- 使用Cognito进行身份验证
-- API Gateway限流
-- DynamoDB访问控制
-- 环境变量管理
-- 输入验证和清理
-
-## 贡献指南
-
-1. Fork项目
+1. Fork 项目
 2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建Pull Request
+3. 在 local 环境测试
+4. 提交 PR
 
-## 许可证
+## 📄 许可证
 
 MIT License
+
+---
+
+**现在你拥有企业级的本地开发环境！** 🎉

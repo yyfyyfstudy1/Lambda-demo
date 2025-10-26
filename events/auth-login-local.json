@@ -1,0 +1,15 @@
+{
+  "httpMethod": "POST",
+  "path": "/auth/login",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": "{\"email\":\"test@example.com\",\"password\":\"Test1234!\"}",
+  "requestContext": {
+    "requestId": "local-test-request",
+    "authorizer": {}
+  }
+}
+

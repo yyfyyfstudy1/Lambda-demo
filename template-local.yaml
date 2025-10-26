@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda SpaceTalk - LocalStack local testing
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        STAGE: local
+        REGION: us-east-1
+        USE_LOCALSTACK: "true"
+        LOCALSTACK_ENDPOINT: "http://host.docker.internal:4566"
+        DYNAMODB_TABLE_PREFIX: lambda-spacetalk-local
+        COGNITO_USER_POOL_ID: us-east-1_localstack
+        COGNITO_USER_POOL_CLIENT_ID: localstack-client
+        LOG_LEVEL: debug
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+
+Resources:
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: lambda-spacetalk-local-auth
+      CodeUri: dist/
+      Handler: handlers/auth.handler
+      Events:
+        AuthLogin:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: POST
+        AuthRegister:
+          Type: Api
+          Properties:
+            Path: /auth/register
+            Method: POST
+        AuthMe:
+          Type: Api
+          Properties:
+            Path: /auth/me
+            Method: GET
+        AuthProxy:
+          Type: Api
+          Properties:
+            Path: /auth/{proxy+}
+            Method: ANY
+
+  FamilyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: lambda-spacetalk-local-family
+      CodeUri: dist/
+      Handler: handlers/family.handler
+      Events:
+        FamilyRoot:
+          Type: Api
+          Properties:
+            Path: /family
+            Method: ANY
+        FamilyProxy:
+          Type: Api
+          Properties:
+            Path: /family/{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiUrl:
+    Description: "Local API Gateway endpoint URL"
+    Value: "http://localhost:3000"
+  
+  LocalStackEndpoint:
+    Description: "LocalStack endpoint"
+    Value: "http://localhost:4566"
+
