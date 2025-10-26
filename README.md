@@ -1,4 +1,4 @@
-# Lambda SpaceTalk
+# Lambda Demo
 
 企业级 Node.js Lambda 后端项目，使用 Cognito 身份验证、DynamoDB 数据库和 Terraform 基础设施管理。
 
