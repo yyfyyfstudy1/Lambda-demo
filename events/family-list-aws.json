@@ -1,0 +1,17 @@
+{
+  "httpMethod": "GET",
+  "path": "/dev/family",
+  "headers": {},
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": null,
+  "requestContext": {
+    "requestId": "cli-test",
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id-12345",
+        "email": "test@example.com"
+      }
+    }
+  }
+}

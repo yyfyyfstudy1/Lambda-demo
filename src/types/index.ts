@@ -49,6 +49,15 @@ export interface FamilyMember {
   phone?: string;
 }
 
+export interface Route {
+    id: string;
+    familyId: string;
+    name: string;
+    description?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
